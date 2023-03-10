@@ -890,6 +890,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             canvasScalerPopup.uiScaleMode = canvasScaler.uiScaleMode;
             canvasScalerPopup.referenceResolution = canvasScaler.referenceResolution;
             canvasScalerPopup.screenMatchMode = canvasScaler.screenMatchMode;
+            canvasScalerPopup.matchWidthOrHeight = canvasScaler.matchWidthOrHeight;
             canvasScalerPopup.referencePixelsPerUnit = canvasScaler.referencePixelsPerUnit;
             canvasScalerPopup.scaleFactor = canvasScaler.scaleFactor;
             canvasScalerPopup.physicalUnit = canvasScaler.physicalUnit;
