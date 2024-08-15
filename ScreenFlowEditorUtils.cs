@@ -99,6 +99,7 @@ namespace LegendaryTools.Systems.ScreenFlow
 
         public static string CamelCaseToAllUpperWithUnderscores(string text)
         {
+            text = text.Replace(" ", "");
             List<char> characters = new List<char>();
 
             characters.AddRange(text.ToCharArray());

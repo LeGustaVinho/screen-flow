@@ -1,6 +1,9 @@
+using UnityEngine;
+
 namespace LegendaryTools.Systems.ScreenFlow
 {
-    public abstract class PopupConfig : UIEntityBaseConfig
+    [CreateAssetMenu(menuName = "Tools/ScreenFlow/PopupConfig")]
+    public class PopupConfig : UIEntityBaseConfig
     {
         public PopupGoingBackgroundBehaviour GoingBackgroundBehaviour = PopupGoingBackgroundBehaviour.DontHide;
     }

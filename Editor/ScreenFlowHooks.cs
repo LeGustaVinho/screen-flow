@@ -3,7 +3,7 @@ using UnityEditor;
 
 namespace LegendaryTools.Systems.ScreenFlow.Editor
 {
-    [InitializeOnLoadAttribute]
+    [InitializeOnLoad]
     public static class ScreenFlowHooks
     {
         static ScreenFlowHooks()
