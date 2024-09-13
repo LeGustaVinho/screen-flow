@@ -3,45 +3,15 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+#if ENABLE_INPUT_SYSTEM
+
+#endif
 
 namespace LegendaryTools.Systems.ScreenFlow
 {
-    public class EntityArgPair<T>
-    {
-        public readonly T Entity;
-        public readonly System.Object Args;
-
-        public EntityArgPair(T uiEntity, object args)
-        {
-            Entity = uiEntity;
-            Args = args;
-        }
-    }
-
-    public enum ScreenFlowCommandType
-    {
-        Trigger,
-        MoveBack,
-        ClosePopup
-    }
-
-    [Serializable]
-    public class ScreenInScene
-    {
-        public ScreenConfig Config;
-        public ScreenBase ScreenInstance;
-    }
-    
-    [Serializable]
-    public class PopupInScene
-    {
-        public PopupConfig Config;
-        public PopupBase PopupInstance;
-    }
-    
     [RequireComponent(typeof(Canvas))]
     [RequireComponent(typeof(CanvasScaler))]
-    public class ScreenFlow : SingletonBehaviour<ScreenFlow>
+    public class ScreenFlow : SingletonBehaviour<ScreenFlow>, IScreenFlow
     {
         public ScreenFlowConfig Config;
         public ScreenConfig StartScreen;
@@ -97,18 +67,18 @@ namespace LegendaryTools.Systems.ScreenFlow
         private GraphicRaycaster graphicRaycaster;
 
         public void SendTrigger(string name, System.Object args = null, bool enqueue = false, 
-            Action<ScreenBase> onShow = null, Action<ScreenBase> onHide = null)
+            Action<ScreenBase> requestedScreenOnShow = null, Action<ScreenBase> previousScreenOnHide = null)
         {
             if (uiEntitiesLookup.TryGetValue(name, out UIEntityBaseConfig uiEntityBaseConfig))
             {
-                SendTrigger(uiEntityBaseConfig, args, enqueue, onShow, onHide);
+                SendTrigger(uiEntityBaseConfig, args, enqueue, requestedScreenOnShow, previousScreenOnHide);
             }
         }
 
         public void SendTrigger(UIEntityBaseConfig uiEntity, System.Object args = null, bool enqueue = false, 
-            Action<ScreenBase> onShow = null, Action<ScreenBase> onHide = null)
+            Action<ScreenBase> requestedScreenOnShow = null, Action<ScreenBase> previousScreenOnHide = null)
         {
-            ScreenFlowCommand command = new ScreenFlowCommand(ScreenFlowCommandType.Trigger, uiEntity, args, onShow, onHide);
+            ScreenFlowCommand command = new ScreenFlowCommand(ScreenFlowCommandType.Trigger, uiEntity, args, requestedScreenOnShow, previousScreenOnHide);
             if (!IsTransiting)
             {
                 commandQueue.Add(command);
@@ -202,10 +172,12 @@ namespace LegendaryTools.Systems.ScreenFlow
 
         protected virtual void Update()
         {
+            #if ENABLE_LEGACY_INPUT_MANAGER
             if (Input.GetKeyDown(KeyCode.Escape))
             {
                 ProcessBackKey();
             }
+            #endif
         }
 
         private void Initialize()
@@ -345,14 +317,14 @@ namespace LegendaryTools.Systems.ScreenFlow
                         case AnimationType.Wait:
                         {
                             //Wait for hide's animation to complete
-                            yield return popupBase.Hide(args);
+                            yield return popupBase.RequestHide(args);
                             onHide?.Invoke(CurrentPopupInstance);
                             DisposePopupFromHide(popupConfig, popupBase);
                             break;
                         }
                         case AnimationType.Intersection:
                         {
-                            hidePopupRoutine = StartCoroutine(popupBase.Hide(args));
+                            hidePopupRoutine = StartCoroutine(popupBase.RequestHide(args));
                             break;
                         }
                     }
@@ -459,7 +431,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                     case AnimationType.Wait:
                     {
                         //Wait for hide's animation to complete
-                        yield return CurrentScreenInstance.Hide(args);
+                        yield return CurrentScreenInstance.RequestHide(args);
                         
                         onHide?.Invoke(CurrentScreenInstance);
 
@@ -483,7 +455,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                     case AnimationType.Intersection:
                     {
                         //Hide animation starts playing 
-                        hideScreenRoutine = StartCoroutine(CurrentScreenInstance.Hide(args));
+                        hideScreenRoutine = StartCoroutine(CurrentScreenInstance.RequestHide(args));
                         break;
                     }
                 }
@@ -609,7 +581,7 @@ namespace LegendaryTools.Systems.ScreenFlow
 
                             if (CurrentPopupConfig.GoingBackgroundBehaviour != PopupGoingBackgroundBehaviour.DontHide)
                             {
-                                yield return CurrentPopupInstance.Hide(args);
+                                yield return CurrentPopupInstance.RequestHide(args);
                                 onHide?.Invoke(CurrentPopupInstance);
 
                                 if (CurrentPopupConfig.GoingBackgroundBehaviour ==
@@ -622,7 +594,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                         else
                         {
                             //Wait for hide's animation to complete
-                            yield return CurrentPopupInstance.Hide(args);
+                            yield return CurrentPopupInstance.RequestHide(args);
                             onHide?.Invoke(CurrentPopupInstance);
                             DisposePopupFromHide(CurrentPopupConfig, CurrentPopupInstance, CurrentPopupConfig == popupConfig);
                         }
@@ -638,13 +610,13 @@ namespace LegendaryTools.Systems.ScreenFlow
                             if (CurrentPopupConfig.GoingBackgroundBehaviour != PopupGoingBackgroundBehaviour.DontHide)
                             {
                                 //Hide animation starts playing 
-                                hidePopupRoutine = StartCoroutine(CurrentPopupInstance.Hide(args));
+                                hidePopupRoutine = StartCoroutine(CurrentPopupInstance.RequestHide(args));
                             }
                         }
                         else
                         {
                             //Hide animation starts playing 
-                            hidePopupRoutine = StartCoroutine(CurrentPopupInstance.Hide(args));
+                            hidePopupRoutine = StartCoroutine(CurrentPopupInstance.RequestHide(args));
                         }
 
                         break;

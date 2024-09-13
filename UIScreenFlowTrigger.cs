@@ -3,13 +3,6 @@ using UnityEngine.UI;
 
 namespace LegendaryTools.Systems.ScreenFlow
 {
-    public enum ScreenFlowTriggerMode
-    {
-        Trigger,
-        MoveBack,
-        ClosePopup,
-    }
-
     public class UIScreenFlowTrigger : MonoBehaviour
     {
         public ScreenFlowTriggerMode Mode = ScreenFlowTriggerMode.Trigger;

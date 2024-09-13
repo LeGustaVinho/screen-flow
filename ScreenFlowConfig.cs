@@ -5,34 +5,6 @@ using UnityEditor;
 
 namespace LegendaryTools.Systems.ScreenFlow
 {
-    public enum AnimationType
-    {
-        NoAnimation,
-        Wait,
-        Intersection,
-    }
-
-    public enum BackKeyBehaviour
-    {
-        NotAllowed,
-        ScreenMoveBack,
-        CloseFirstPopup,
-    }
-
-    public enum PopupsBehaviourOnScreenTransition
-    {
-        PreserveAllOnHide,
-        HideFirstThenTransit,
-        DestroyAllThenTransit,
-    }
-
-    public enum PopupGoingBackgroundBehaviour
-    {
-        DontHide,
-        JustHide,
-        HideAndDestroy,
-    }
-
     [CreateAssetMenu(menuName = "Tools/ScreenFlow/ScreenFlowConfig")]
     public class ScreenFlowConfig : ScriptableObject
     {
@@ -57,7 +29,6 @@ namespace LegendaryTools.Systems.ScreenFlow
         {
             ScreenFlowEditorUtils.WeaverClassFor(this, true);
         }
-
 #endif
     }
 }
