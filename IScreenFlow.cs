@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 
 namespace LegendaryTools.Systems.ScreenFlow
 {
@@ -10,6 +11,8 @@ namespace LegendaryTools.Systems.ScreenFlow
         ScreenBase CurrentScreenInstance { get; }
         PopupConfig CurrentPopupConfig { get; }
         PopupBase CurrentPopupInstance { get; }
+        List<PopupBase> CurrentPopupInstancesStack { get; }
+        
         int PopupStackCount { get; }
 
         void SendTrigger(string name, System.Object args = null, bool enqueue = false, 

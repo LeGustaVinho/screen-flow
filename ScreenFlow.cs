@@ -27,24 +27,26 @@ namespace LegendaryTools.Systems.ScreenFlow
         public bool IsPreloading => preloadRoutine != null;
 
         public ScreenConfig CurrentScreenConfig =>
-            screensHistory.Count > 0 ? screensHistory[screensHistory.Count - 1].Entity : null;
+            ScreensHistory.Count > 0 ? ScreensHistory[ScreensHistory.Count - 1].Entity : null;
 
         public ScreenBase CurrentScreenInstance { private set; get; }
 
         public PopupConfig CurrentPopupConfig =>
-            popupConfigsStack.Count > 0 ? popupConfigsStack[popupConfigsStack.Count - 1] : null;
+            PopupConfigsStack.Count > 0 ? PopupConfigsStack[PopupConfigsStack.Count - 1] : null;
 
         public PopupBase CurrentPopupInstance =>
-            popupInstancesStack.Count > 0 ? popupInstancesStack[popupInstancesStack.Count - 1] : null;
+            PopupInstancesStack.Count > 0 ? PopupInstancesStack[PopupInstancesStack.Count - 1] : null;
 
-        public int PopupStackCount => popupInstancesStack.Count;
+        public List<PopupBase> CurrentPopupInstancesStack => new List<PopupBase>(PopupInstancesStack);
 
-        protected readonly List<UIEntityBaseConfig> preloadQueue = new List<UIEntityBaseConfig>();
-        protected readonly List<EntityArgPair<ScreenConfig>> screensHistory = new List<EntityArgPair<ScreenConfig>>();
-        protected readonly List<PopupConfig> popupConfigsStack = new List<PopupConfig>();
-        protected readonly List<PopupBase> popupInstancesStack = new List<PopupBase>();
-        protected readonly Dictionary<PopupBase, Canvas> allocatedPopupCanvas = new Dictionary<PopupBase, Canvas>();
-        protected readonly List<Canvas> availablePopupCanvas = new List<Canvas>();
+        public int PopupStackCount => PopupInstancesStack.Count;
+
+        protected readonly List<UIEntityBaseConfig> PreloadQueue = new List<UIEntityBaseConfig>();
+        protected readonly List<EntityArgPair<ScreenConfig>> ScreensHistory = new List<EntityArgPair<ScreenConfig>>();
+        protected readonly List<PopupConfig> PopupConfigsStack = new List<PopupConfig>();
+        protected readonly List<PopupBase> PopupInstancesStack = new List<PopupBase>();
+        protected readonly Dictionary<PopupBase, Canvas> AllocatedPopupCanvas = new Dictionary<PopupBase, Canvas>();
+        protected readonly List<Canvas> AvailablePopupCanvas = new List<Canvas>();
         
         private readonly List<ScreenFlowCommand> commandQueue = new List<ScreenFlowCommand>();
         private readonly Dictionary<string, UIEntityBaseConfig> uiEntitiesLookup =
@@ -279,7 +281,7 @@ namespace LegendaryTools.Systems.ScreenFlow
 
         private IEnumerator MoveBackOp(System.Object args, Action<ScreenBase> onShow = null, Action<ScreenBase> onHide = null)
         {
-            EntityArgPair<ScreenConfig> previousScreenConfig = screensHistory.Count > 1 ? screensHistory[screensHistory.Count - 2] : null;
+            EntityArgPair<ScreenConfig> previousScreenConfig = ScreensHistory.Count > 1 ? ScreensHistory[ScreensHistory.Count - 2] : null;
             if (previousScreenConfig != null)
             {
                 if (CurrentScreenConfig.CanMoveBackFromHere && previousScreenConfig.Entity.CanMoveBackToHere)
@@ -293,20 +295,20 @@ namespace LegendaryTools.Systems.ScreenFlow
         private IEnumerator ClosePopupOp(PopupBase popupBase, System.Object args, Action<ScreenBase> onShow = null, 
             Action<ScreenBase> onHide = null)
         {
-            int stackIndex = popupInstancesStack.FindIndex(item => item == popupBase);
+            int stackIndex = PopupInstancesStack.FindIndex(item => item == popupBase);
 
             if (stackIndex >= 0)
             {
-                bool isTopOfStack = stackIndex == popupInstancesStack.Count - 1;
-                PopupConfig popupConfig = popupConfigsStack[stackIndex];
+                bool isTopOfStack = stackIndex == PopupInstancesStack.Count - 1;
+                PopupConfig popupConfig = PopupConfigsStack[stackIndex];
 
                 PopupConfig behindPopupConfig = null;
                 PopupBase behindPopupInstance = null;
 
                 if (stackIndex - 1 >= 0)
                 {
-                    behindPopupConfig = popupConfigsStack[stackIndex - 1];
-                    behindPopupInstance = popupInstancesStack[stackIndex - 1];
+                    behindPopupConfig = PopupConfigsStack[stackIndex - 1];
+                    behindPopupInstance = PopupInstancesStack[stackIndex - 1];
                 }
 
                 if (isTopOfStack)
@@ -379,24 +381,24 @@ namespace LegendaryTools.Systems.ScreenFlow
 
         private IEnumerator Preload()
         {
-            preloadQueue.Clear();
+            PreloadQueue.Clear();
             
             ScreenConfig[] screens = Array.FindAll(Config.Screens, item => item.AssetLoaderConfig.PreLoad);
             
             if(screens.Length > 0)
-                preloadQueue.AddRange(screens);
+                PreloadQueue.AddRange(screens);
 
             PopupConfig[] popups = Array.FindAll(Config.Popups, item => item.AssetLoaderConfig.PreLoad);
             
             if(popups.Length > 0)
-                preloadQueue.AddRange(Array.FindAll(Config.Popups, item => item.AssetLoaderConfig.PreLoad));
+                PreloadQueue.AddRange(Array.FindAll(Config.Popups, item => item.AssetLoaderConfig.PreLoad));
 
             yield return PreloadingAssets();
         }
 
         private IEnumerator PreloadingAssets()
         {
-            foreach (UIEntityBaseConfig uiEntityBaseConfig in preloadQueue)
+            foreach (UIEntityBaseConfig uiEntityBaseConfig in PreloadQueue)
             {
                 uiEntityBaseConfig.AssetLoaderConfig.PrepareLoadRoutine<ScreenBase>();
                 yield return uiEntityBaseConfig.AssetLoaderConfig.WaitLoadRoutine();
@@ -410,9 +412,9 @@ namespace LegendaryTools.Systems.ScreenFlow
             {
                 if (!screenConfig.AssetLoaderConfig.IsLoading) //Prevents loading, because the asset is being loaded in the preload routine 
                 {
-                    if (preloadQueue.Contains(screenConfig)) //Check if it is in the preloading queue 
+                    if (PreloadQueue.Contains(screenConfig)) //Check if it is in the preloading queue 
                     {
-                        preloadQueue.Remove(screenConfig);
+                        PreloadQueue.Remove(screenConfig);
                     }
 
                     //Schedule the new screen to load in the background
@@ -543,14 +545,14 @@ namespace LegendaryTools.Systems.ScreenFlow
 
             if (isMoveBack)
             {
-                screensHistory.RemoveAt(screensHistory.Count - 1);
+                ScreensHistory.RemoveAt(ScreensHistory.Count - 1);
             }
             else
             {
-                screensHistory.Add(new EntityArgPair<ScreenConfig>(screenConfig, args));
+                ScreensHistory.Add(new EntityArgPair<ScreenConfig>(screenConfig, args));
             }
 
-            foreach (PopupBase popup in popupInstancesStack)
+            foreach (PopupBase popup in PopupInstancesStack)
             {
                 popup.ParentScreen = CurrentScreenInstance;
             }
@@ -715,8 +717,8 @@ namespace LegendaryTools.Systems.ScreenFlow
             newPopup.OnClosePopupRequest += OnClosePopupRequest;
 
             //Update to new state
-            popupConfigsStack.Add(popupConfig);
-            popupInstancesStack.Add(newPopup);
+            PopupConfigsStack.Add(popupConfig);
+            PopupInstancesStack.Add(newPopup);
 
             popupTransitionRoutine = null;
             onShow?.Invoke(newPopup);
@@ -741,18 +743,18 @@ namespace LegendaryTools.Systems.ScreenFlow
                     case PopupsBehaviourOnScreenTransition.HideFirstThenTransit:
                     {
                         yield return ClosePopupOp(CurrentPopupInstance, args);
-                        for (int i = popupConfigsStack.Count - 1; i >= 0; i--)
+                        for (int i = PopupConfigsStack.Count - 1; i >= 0; i--)
                         {
-                            DisposePopupFromHide(popupConfigsStack[i], popupInstancesStack[i]);
+                            DisposePopupFromHide(PopupConfigsStack[i], PopupInstancesStack[i]);
                         }
 
                         break;
                     }
                     case PopupsBehaviourOnScreenTransition.DestroyAllThenTransit:
                     {
-                        for (int i = popupConfigsStack.Count - 1; i >= 0; i--)
+                        for (int i = PopupConfigsStack.Count - 1; i >= 0; i--)
                         {
-                            DisposePopupFromHide(popupConfigsStack[i], popupInstancesStack[i]);
+                            DisposePopupFromHide(PopupConfigsStack[i], PopupInstancesStack[i]);
                         }
 
                         break;
@@ -764,8 +766,8 @@ namespace LegendaryTools.Systems.ScreenFlow
         private void DisposePopupFromHide(PopupConfig popupConfig, PopupBase popupInstance, bool forceDontUnload = false)
         {
             //Remove current popup from stack
-            popupConfigsStack.Remove(popupConfig);
-            popupInstancesStack.Remove(popupInstance);
+            PopupConfigsStack.Remove(popupConfig);
+            PopupInstancesStack.Remove(popupInstance);
             RecyclePopupCanvas(popupInstance);
 
             popupInstance.OnClosePopupRequest -= OnClosePopupRequest;
@@ -826,27 +828,27 @@ namespace LegendaryTools.Systems.ScreenFlow
         private Canvas AllocatePopupCanvas(PopupBase popupInstance)
         {
             Canvas availableCanvas = null;
-            if (availablePopupCanvas.Count > 0)
+            if (AvailablePopupCanvas.Count > 0)
             {
-                availableCanvas = availablePopupCanvas[availablePopupCanvas.Count - 1];
-                availablePopupCanvas.RemoveAt(availablePopupCanvas.Count - 1);
+                availableCanvas = AvailablePopupCanvas[AvailablePopupCanvas.Count - 1];
+                AvailablePopupCanvas.RemoveAt(AvailablePopupCanvas.Count - 1);
             }
             else
             {
                 availableCanvas = CreatePopupCanvas();
             }
 
-            allocatedPopupCanvas.Add(popupInstance, availableCanvas);
+            AllocatedPopupCanvas.Add(popupInstance, availableCanvas);
             availableCanvas.gameObject.SetActive(true);
             return availableCanvas;
         }
 
         private void RecyclePopupCanvas(PopupBase popupInstance)
         {
-            if (allocatedPopupCanvas.TryGetValue(popupInstance, out Canvas popupCanvas))
+            if (AllocatedPopupCanvas.TryGetValue(popupInstance, out Canvas popupCanvas))
             {
-                allocatedPopupCanvas.Remove(popupInstance);
-                availablePopupCanvas.Add(popupCanvas);
+                AllocatedPopupCanvas.Remove(popupInstance);
+                AvailablePopupCanvas.Add(popupCanvas);
                 popupCanvas.gameObject.SetActive(false);
             }
         }
@@ -905,7 +907,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                 }
                 else
                 {
-                    if (allocatedPopupCanvas.TryGetValue(topOfStackPopupInstance, out Canvas currentPopupCanvas))
+                    if (AllocatedPopupCanvas.TryGetValue(topOfStackPopupInstance, out Canvas currentPopupCanvas))
                     {
                         canvasPopup.sortingOrder = currentPopupCanvas.sortingOrder + 1;
                     }
