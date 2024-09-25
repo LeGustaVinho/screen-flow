@@ -41,6 +41,9 @@ namespace LegendaryTools.Systems.ScreenFlow
 
         public int PopupStackCount => PopupInstancesStack.Count;
 
+        public event Action<ScreenConfig, ScreenConfig> OnScreenChange;
+        public event Action<PopupConfig, PopupConfig> OnPopupOpen;
+
         protected readonly List<UIEntityBaseConfig> PreloadQueue = new List<UIEntityBaseConfig>();
         protected readonly List<EntityArgPair<ScreenConfig>> ScreensHistory = new List<EntityArgPair<ScreenConfig>>();
         protected readonly List<PopupConfig> PopupConfigsStack = new List<PopupConfig>();
@@ -425,6 +428,7 @@ namespace LegendaryTools.Systems.ScreenFlow
 
             yield return HandlePopupsOnScreenTransit(args);
 
+            ScreenConfig oldScreenConfig = CurrentScreenConfig;
             if (CurrentScreenConfig != null)
             {
                 switch (CurrentScreenConfig.AnimationType)
@@ -542,7 +546,6 @@ namespace LegendaryTools.Systems.ScreenFlow
 
             //Update to new state
             CurrentScreenInstance = newScreenInstance;
-
             if (isMoveBack)
             {
                 ScreensHistory.RemoveAt(ScreensHistory.Count - 1);
@@ -559,6 +562,7 @@ namespace LegendaryTools.Systems.ScreenFlow
 
             screenTransitionRoutine = null;
             onShow?.Invoke(newScreenInstance);
+            OnScreenChange?.Invoke(oldScreenConfig, screenConfig);
         }
 
         private IEnumerator PopupTransitTo(PopupConfig popupConfig, System.Object args = null, Action<ScreenBase> onShow = null, Action<ScreenBase> onHide = null)
@@ -569,6 +573,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                 newPopupLoading = StartCoroutine(popupConfig.AssetLoaderConfig.WaitLoadRoutine());
             }
 
+            PopupConfig oldPopupConfig = CurrentPopupConfig;
             if (CurrentPopupConfig != null)
             {
                 switch (CurrentPopupConfig.AnimationType)
@@ -719,9 +724,10 @@ namespace LegendaryTools.Systems.ScreenFlow
             //Update to new state
             PopupConfigsStack.Add(popupConfig);
             PopupInstancesStack.Add(newPopup);
-
+            
             popupTransitionRoutine = null;
             onShow?.Invoke(newPopup);
+            OnPopupOpen?.Invoke(oldPopupConfig, popupConfig);
         }
 
         private void OnClosePopupRequest(PopupBase popupToClose)

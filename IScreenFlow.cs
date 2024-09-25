@@ -13,6 +13,9 @@ namespace LegendaryTools.Systems.ScreenFlow
         PopupBase CurrentPopupInstance { get; }
         List<PopupBase> CurrentPopupInstancesStack { get; }
         
+        event Action<ScreenConfig, ScreenConfig> OnScreenChange;
+        event Action<PopupConfig, PopupConfig> OnPopupOpen;
+        
         int PopupStackCount { get; }
 
         void SendTrigger(string name, System.Object args = null, bool enqueue = false, 
