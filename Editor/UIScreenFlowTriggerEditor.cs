@@ -1,7 +1,5 @@
 using System;
 using UnityEditor;
-using UnityEditor.SceneManagement;
-using UnityEngine;
 
 namespace LegendaryTools.Systems.ScreenFlow.Editor
 {
@@ -12,8 +10,6 @@ namespace LegendaryTools.Systems.ScreenFlow.Editor
         private SerializedProperty triggerModeProperty;
         private SerializedProperty uiEntityProperty;
         private SerializedProperty enqueueProperty;
-
-        private bool IsPrefabMode => EditorSceneManager.IsPreviewScene((target as MonoBehaviour).gameObject.scene);
 
         private void OnEnable()
         {

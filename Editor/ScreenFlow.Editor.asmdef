@@ -2,7 +2,8 @@
     "name": "LegendaryTools.Systems.ScreenFlow.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:c43965c8dc5dbda40848ec46f1a58c24"
+        "GUID:c43965c8dc5dbda40848ec46f1a58c24",
+        "GUID:2247f345c1389cb428906dc038800b93"
     ],
     "includePlatforms": [
         "Editor"

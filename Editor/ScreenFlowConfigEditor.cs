@@ -3,6 +3,7 @@ using UnityEngine;
 
 namespace LegendaryTools.Systems.ScreenFlow.Editor
 {
+#if !ODIN_INSPECTOR
     [CustomEditor(typeof(ScreenFlowConfig))]
     [CanEditMultipleObjects]
     public class ScreenFlowConfigEditor : UnityEditor.Editor
@@ -15,11 +16,7 @@ namespace LegendaryTools.Systems.ScreenFlow.Editor
             {
                 (target as ScreenFlowConfig).FindConfigs();
             }
-
-            if (GUILayout.Button(nameof(ScreenFlowConfig.WeaverClass)))
-            {
-                (target as ScreenFlowConfig).WeaverClass();
-            }
         }
     }
+#endif
 }

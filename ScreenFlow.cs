@@ -29,15 +29,15 @@ namespace LegendaryTools.Systems.ScreenFlow
         public ScreenConfig CurrentScreenConfig =>
             ScreensHistory.Count > 0 ? ScreensHistory[ScreensHistory.Count - 1].Entity : null;
 
-        public ScreenBase CurrentScreenInstance { private set; get; }
+        public IScreenBase CurrentScreenInstance { private set; get; }
 
         public PopupConfig CurrentPopupConfig =>
             PopupConfigsStack.Count > 0 ? PopupConfigsStack[PopupConfigsStack.Count - 1] : null;
 
-        public PopupBase CurrentPopupInstance =>
+        public IPopupBase CurrentPopupInstance =>
             PopupInstancesStack.Count > 0 ? PopupInstancesStack[PopupInstancesStack.Count - 1] : null;
 
-        public List<PopupBase> CurrentPopupInstancesStack => new List<PopupBase>(PopupInstancesStack);
+        public List<IPopupBase> CurrentPopupInstancesStack => new List<IPopupBase>(PopupInstancesStack);
 
         public int PopupStackCount => PopupInstancesStack.Count;
 
@@ -47,8 +47,8 @@ namespace LegendaryTools.Systems.ScreenFlow
         protected readonly List<UIEntityBaseConfig> PreloadQueue = new List<UIEntityBaseConfig>();
         protected readonly List<EntityArgPair<ScreenConfig>> ScreensHistory = new List<EntityArgPair<ScreenConfig>>();
         protected readonly List<PopupConfig> PopupConfigsStack = new List<PopupConfig>();
-        protected readonly List<PopupBase> PopupInstancesStack = new List<PopupBase>();
-        protected readonly Dictionary<PopupBase, Canvas> AllocatedPopupCanvas = new Dictionary<PopupBase, Canvas>();
+        protected readonly List<IPopupBase> PopupInstancesStack = new List<IPopupBase>();
+        protected readonly Dictionary<IPopupBase, Canvas> AllocatedPopupCanvas = new Dictionary<IPopupBase, Canvas>();
         protected readonly List<Canvas> AvailablePopupCanvas = new List<Canvas>();
         
         private readonly List<ScreenFlowCommand> commandQueue = new List<ScreenFlowCommand>();
@@ -72,7 +72,7 @@ namespace LegendaryTools.Systems.ScreenFlow
         private GraphicRaycaster graphicRaycaster;
 
         public void SendTrigger(string name, System.Object args = null, bool enqueue = false, 
-            Action<ScreenBase> requestedScreenOnShow = null, Action<ScreenBase> previousScreenOnHide = null)
+            Action<IScreenBase> requestedScreenOnShow = null, Action<IScreenBase> previousScreenOnHide = null)
         {
             if (uiEntitiesLookup.TryGetValue(name, out UIEntityBaseConfig uiEntityBaseConfig))
             {
@@ -81,7 +81,7 @@ namespace LegendaryTools.Systems.ScreenFlow
         }
 
         public void SendTrigger(UIEntityBaseConfig uiEntity, System.Object args = null, bool enqueue = false, 
-            Action<ScreenBase> requestedScreenOnShow = null, Action<ScreenBase> previousScreenOnHide = null)
+            Action<IScreenBase> requestedScreenOnShow = null, Action<IScreenBase> previousScreenOnHide = null)
         {
             ScreenFlowCommand command = new ScreenFlowCommand(ScreenFlowCommandType.Trigger, uiEntity, args, requestedScreenOnShow, previousScreenOnHide);
             if (!IsTransiting)
@@ -98,7 +98,26 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
         }
 
-        public void MoveBack(System.Object args = null, bool enqueue = false, Action<ScreenBase> onShow = null, Action<ScreenBase> onHide = null)
+        public void SendTriggerT<TConfig, TShow, THide>(TConfig uiEntity, System.Object args = null, bool enqueue = false,
+            Action<TShow> requestedScreenOnShow = null, Action<THide> previousScreenOnHide = null)
+            where TConfig : UIEntityBaseConfig
+            where TShow : class, IScreenBase
+            where THide : class, IScreenBase
+        {
+            void RequestedScreenOnShowDual(IScreenBase screenBase)
+            {
+                requestedScreenOnShow?.Invoke(screenBase as TShow);
+            }
+            
+            void PreviousScreenOnHideDual(IScreenBase screenBase)
+            {
+                previousScreenOnHide?.Invoke(screenBase as THide);
+            }
+            
+            SendTrigger(uiEntity, args , enqueue, RequestedScreenOnShowDual, PreviousScreenOnHideDual);
+        }
+
+        public void MoveBack(System.Object args = null, bool enqueue = false, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
         {
             ScreenFlowCommand command = new ScreenFlowCommand(ScreenFlowCommandType.MoveBack, null, args, onShow, onHide);
             if (!IsTransiting)
@@ -115,7 +134,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
         }
 
-        public void CloseForegroundPopup(System.Object args = null, bool enqueue = false, Action<ScreenBase> onShow = null, Action<ScreenBase> onHide = null)
+        public void CloseForegroundPopup(System.Object args = null, bool enqueue = false, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
         {
             if (CurrentPopupInstance != null)
             {
@@ -123,7 +142,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
         }
 
-        public void ClosePopup(PopupBase popupBase, System.Object args = null, bool enqueue = false, Action<ScreenBase> onShow = null, Action<ScreenBase> onHide = null)
+        public void ClosePopup(IPopupBase popupBase, System.Object args = null, bool enqueue = false, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
         {
             var command = new ScreenFlowCommand(ScreenFlowCommandType.ClosePopup, popupBase, args, onShow, onHide);
             if (!IsTransiting)
@@ -282,7 +301,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             transitionRoutine = null;
         }
 
-        private IEnumerator MoveBackOp(System.Object args, Action<ScreenBase> onShow = null, Action<ScreenBase> onHide = null)
+        private IEnumerator MoveBackOp(System.Object args, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
         {
             EntityArgPair<ScreenConfig> previousScreenConfig = ScreensHistory.Count > 1 ? ScreensHistory[ScreensHistory.Count - 2] : null;
             if (previousScreenConfig != null)
@@ -295,8 +314,8 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
         }
         
-        private IEnumerator ClosePopupOp(PopupBase popupBase, System.Object args, Action<ScreenBase> onShow = null, 
-            Action<ScreenBase> onHide = null)
+        private IEnumerator ClosePopupOp(IPopupBase popupBase, System.Object args, Action<IScreenBase> onShow = null, 
+            Action<IScreenBase> onHide = null)
         {
             int stackIndex = PopupInstancesStack.FindIndex(item => item == popupBase);
 
@@ -306,7 +325,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                 PopupConfig popupConfig = PopupConfigsStack[stackIndex];
 
                 PopupConfig behindPopupConfig = null;
-                PopupBase behindPopupInstance = null;
+                IPopupBase behindPopupInstance = null;
 
                 if (stackIndex - 1 >= 0)
                 {
@@ -409,7 +428,7 @@ namespace LegendaryTools.Systems.ScreenFlow
         }
 
         private IEnumerator ScreenTransitTo(ScreenConfig screenConfig, bool isMoveBack = false,
-            System.Object args = null, Action<ScreenBase> onShow = null, Action<ScreenBase> onHide = null)
+            System.Object args = null, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
         {
             if (!screenConfig.AssetLoaderConfig.IsLoaded)
             {
@@ -444,11 +463,11 @@ namespace LegendaryTools.Systems.ScreenFlow
                         if (CurrentScreenConfig.AssetLoaderConfig.IsInScene)
                         {
                             //Screen is serialized on scene, no need to destroy or unload, so just set it disabled
-                            CurrentScreenInstance.gameObject.SetActive(false);
+                            CurrentScreenInstance.GameObject.SetActive(false);
                         }
                         else
                         {
-                            Destroy(CurrentScreenInstance.gameObject);
+                            Destroy(CurrentScreenInstance.GameObject);
 
                             if (!CurrentScreenConfig.AssetLoaderConfig.DontUnloadAfterLoad)
                             {
@@ -524,11 +543,11 @@ namespace LegendaryTools.Systems.ScreenFlow
                 if (CurrentScreenConfig.AssetLoaderConfig.IsInScene)
                 {
                     //Screen is serialized on scene, no need to destroy or unload, so just set it disabled
-                    CurrentScreenInstance.gameObject.SetActive(false); 
+                    CurrentScreenInstance.GameObject.SetActive(false); 
                 }
                 else
                 {
-                    Destroy(CurrentScreenInstance.gameObject);
+                    Destroy(CurrentScreenInstance.GameObject);
 
                     if (!CurrentScreenConfig.AssetLoaderConfig.DontUnloadAfterLoad)
                     {
@@ -555,7 +574,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                 ScreensHistory.Add(new EntityArgPair<ScreenConfig>(screenConfig, args));
             }
 
-            foreach (PopupBase popup in PopupInstancesStack)
+            foreach (IPopupBase popup in PopupInstancesStack)
             {
                 popup.ParentScreen = CurrentScreenInstance;
             }
@@ -565,7 +584,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             OnScreenChange?.Invoke(oldScreenConfig, screenConfig);
         }
 
-        private IEnumerator PopupTransitTo(PopupConfig popupConfig, System.Object args = null, Action<ScreenBase> onShow = null, Action<ScreenBase> onHide = null)
+        private IEnumerator PopupTransitTo(PopupConfig popupConfig, System.Object args = null, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
         {
             if (!popupConfig.AssetLoaderConfig.IsLoaded)
             {
@@ -584,7 +603,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                         if (CurrentScreenConfig.AllowStackablePopups)
                         {
                             onHide?.Invoke(CurrentPopupInstance);
-                            CurrentPopupInstance.OnGoToBackground(args);
+                            CurrentPopupInstance.GoToBackground(args);
 
                             if (CurrentPopupConfig.GoingBackgroundBehaviour != PopupGoingBackgroundBehaviour.DontHide)
                             {
@@ -612,7 +631,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                     {
                         if (CurrentScreenConfig.AllowStackablePopups)
                         {
-                            CurrentPopupInstance.OnGoToBackground(args);
+                            CurrentPopupInstance.GoToBackground(args);
 
                             if (CurrentPopupConfig.GoingBackgroundBehaviour != PopupGoingBackgroundBehaviour.DontHide)
                             {
@@ -640,7 +659,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                 yield break;
             }
             
-            PopupBase newPopup = null;
+            IPopupBase newPopup = null;
             Canvas canvasPopup = null;
             if (popupConfig.AssetLoaderConfig.IsInScene)
             {
@@ -651,7 +670,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                 {
                     canvasPopup = GetComponentInChildren<Canvas>();
                 }
-                newPopup.gameObject.SetActive(true);
+                newPopup.GameObject.SetActive(true);
             }
             else
             {
@@ -730,7 +749,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             OnPopupOpen?.Invoke(oldPopupConfig, popupConfig);
         }
 
-        private void OnClosePopupRequest(PopupBase popupToClose)
+        private void OnClosePopupRequest(IPopupBase popupToClose)
         {
             ClosePopup(popupToClose);
         }
@@ -769,7 +788,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
         }
 
-        private void DisposePopupFromHide(PopupConfig popupConfig, PopupBase popupInstance, bool forceDontUnload = false)
+        private void DisposePopupFromHide(PopupConfig popupConfig, IPopupBase popupInstance, bool forceDontUnload = false)
         {
             //Remove current popup from stack
             PopupConfigsStack.Remove(popupConfig);
@@ -780,11 +799,11 @@ namespace LegendaryTools.Systems.ScreenFlow
 
             if (popupConfig.AssetLoaderConfig.IsInScene)
             {
-                popupInstance.gameObject.SetActive(false);
+                popupInstance.GameObject.SetActive(false);
             }
             else
             {
-                Destroy(popupInstance.gameObject);
+                Destroy(popupInstance.GameObject);
 
                 if (!popupConfig.AssetLoaderConfig.DontUnloadAfterLoad)
                 {
@@ -825,13 +844,13 @@ namespace LegendaryTools.Systems.ScreenFlow
             elementInstanceRT.offsetMax = elementPrefabRT.offsetMax;
         }
 
-        private Canvas GetCanvas(ScreenBase popupBase)
+        private Canvas GetCanvas(IScreenBase popupBase)
         {
             Canvas canvasPopup = popupBase.GetComponentInParent<Canvas>();
             return canvasPopup;
         }
 
-        private Canvas AllocatePopupCanvas(PopupBase popupInstance)
+        private Canvas AllocatePopupCanvas(IPopupBase popupInstance)
         {
             Canvas availableCanvas = null;
             if (AvailablePopupCanvas.Count > 0)
@@ -849,7 +868,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             return availableCanvas;
         }
 
-        private void RecyclePopupCanvas(PopupBase popupInstance)
+        private void RecyclePopupCanvas(IPopupBase popupInstance)
         {
             if (AllocatedPopupCanvas.TryGetValue(popupInstance, out Canvas popupCanvas))
             {
@@ -903,7 +922,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             return canvasPopup;
         }
 
-        private void CalculatePopupCanvasSortOrder(Canvas canvasPopup, PopupBase topOfStackPopupInstance)
+        private void CalculatePopupCanvasSortOrder(Canvas canvasPopup, IPopupBase topOfStackPopupInstance)
         {
             if (canvasPopup != null)
             {

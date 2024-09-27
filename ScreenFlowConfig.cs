@@ -6,28 +6,41 @@ using UnityEditor;
 namespace LegendaryTools.Systems.ScreenFlow
 {
     [CreateAssetMenu(menuName = "Tools/ScreenFlow/ScreenFlowConfig")]
-    public class ScreenFlowConfig : ScriptableObject
+    public class ScreenFlowConfig : ScriptableObject, IWeaveExec
     {
+#if !ODIN_INSPECTOR
+        [SerializeField]
+#endif
+        private WeaveExecType weaveExecType;
+        
+#if ODIN_INSPECTOR
+        [Sirenix.OdinInspector.ShowInInspector]
+#endif
+        public WeaveExecType WeaveExecType
+        {
+            get => weaveExecType;
+            set => weaveExecType = value;
+        }
+        
         public ScreenConfig[] Screens;
         public PopupConfig[] Popups;
 
         public Canvas OverridePopupCanvasPrefab;
 
 #if UNITY_EDITOR
-        [Header("Weaver (Editor Only)")] public string WeaverNamespace;
-        public string WeaverClassname;
-
+#if ODIN_INSPECTOR
+      [Sirenix.OdinInspector.Button]  
+#endif
         public void FindConfigs()
         {
-            Screens = ScreenFlowEditorUtils.FindAssetConfigNear<ScreenConfig>(this).ToArray();
-            Popups = ScreenFlowEditorUtils.FindAssetConfigNear<PopupConfig>(this).ToArray();
-
+            Screens = this.FindAssetConfigNear<ScreenConfig>().ToArray();
+            Popups = this.FindAssetConfigNear<PopupConfig>().ToArray();
             EditorUtility.SetDirty(this);
         }
-
-        public void WeaverClass()
+        
+        public void RunWeaver()
         {
-            ScreenFlowEditorUtils.WeaverClassFor(this, true);
+            FindConfigs();
         }
 #endif
     }
