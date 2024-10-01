@@ -16,7 +16,12 @@ namespace LegendaryTools.Systems.ScreenFlow
             set => parentScreen = value;
         }
 
-        public event Action<IPopupBase> OnClosePopupRequest;
+        private Action<IPopupBase> onClosePopupRequest;
+        event Action<IPopupBase> IPopupBase.OnClosePopupRequest
+        {
+            add => onClosePopupRequest += value;
+            remove => onClosePopupRequest -= value;
+        }
         public event Action<IPopupBase> OnGoneToBackground;
 
         public event Action<T> OnClosePopupRequestT;
@@ -42,7 +47,7 @@ namespace LegendaryTools.Systems.ScreenFlow
 
         public virtual void ClosePopup()
         {
-            OnClosePopupRequest?.Invoke(this);
+            onClosePopupRequest?.Invoke(this);
             OnClosePopupRequestT?.Invoke(this as T);
         }
     }
