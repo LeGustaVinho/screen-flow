@@ -12,13 +12,12 @@ namespace LegendaryTools.Systems.ScreenFlow
 #endif
         ,IScreenBase
     {
-#if !ODIN_INSPECTOR
-        [SerializeField]
-#endif
-        private BackKeyBehaviourOverride backKeyBehaviourOverride = BackKeyBehaviourOverride.Inherit;
 #if ODIN_INSPECTOR
-        public GameObject GameObject => this.gameObject;
-
+        [HideInInspector]    
+#endif
+        [SerializeField] private BackKeyBehaviourOverride backKeyBehaviourOverride = BackKeyBehaviourOverride.Inherit;
+        
+#if ODIN_INSPECTOR
         [Sirenix.OdinInspector.ShowInInspector]
 #endif
         public BackKeyBehaviourOverride BackKeyBehaviourOverride
@@ -27,6 +26,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             set => backKeyBehaviourOverride = value;
         }
         
+        public GameObject GameObject => this.gameObject;
         public event Action<IScreenBase> OnHideRequest;
         public event Action<IScreenBase> OnHideCompleted;
         public event Action<IScreenBase> OnDestroyed;

@@ -8,10 +8,10 @@ namespace LegendaryTools.Systems.ScreenFlow
     [CreateAssetMenu(menuName = "Tools/ScreenFlow/ScreenFlowConfig")]
     public class ScreenFlowConfig : ScriptableObject, IWeaveExec
     {
-#if !ODIN_INSPECTOR
-        [SerializeField]
+#if ODIN_INSPECTOR
+        [HideInInspector]
 #endif
-        private WeaveExecType weaveExecType;
+        [SerializeField] private WeaveExecType weaveExecType;
         
 #if ODIN_INSPECTOR
         [Sirenix.OdinInspector.ShowInInspector]
