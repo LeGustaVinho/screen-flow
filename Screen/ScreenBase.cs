@@ -4,13 +4,7 @@ using UnityEngine;
 
 namespace LegendaryTools.Systems.ScreenFlow
 {
-    public abstract class ScreenBase : 
-#if ODIN_INSPECTOR
-        Sirenix.OdinInspector.SerializedMonoBehaviour
-#else
-        UnityEngine.MonoBehaviour
-#endif
-        ,IScreenBase
+    public abstract class ScreenBase : UnityBehaviour, IScreenBase
     {
 #if ODIN_INSPECTOR
         [HideInInspector]    

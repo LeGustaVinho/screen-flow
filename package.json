@@ -2,7 +2,7 @@
   "name": "com.legustavinho.legendary-tools-screen-flow",
   "displayName": "Legendary Tools - Screen Flow",
   "description": "Screen Flow is a UI screen and popup manager, facilitating UI loading and transition (uGUI).",
-  "version": "3.0.3",
+  "version": "3.0.4",
   "unity": "2019.4",
   "keywords": [],
   "category": "Extensions",
@@ -12,7 +12,7 @@
     "url": "git+https://github.com/LeGustaVinho/screen-flow.git"
   },
   "dependencies": {
-    "com.legustavinho.legendary-tools-common": "1.2.0",
+    "com.legustavinho.legendary-tools-common": "1.2.6",
 	"com.legustavinho.legendary-tools-singleton": "1.0.1",
 	"com.legustavinho.legendary-tools-asset-provider": "2.0.2"
   },
