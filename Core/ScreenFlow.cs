@@ -216,8 +216,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
             #endif
         }
-
-        [Sirenix.OdinInspector.Button]
+        
         public void Initialize()
         {
             if (Config == null)
