@@ -6,6 +6,8 @@ namespace LegendaryTools.Systems.ScreenFlow
 {
     public abstract class ScreenBaseT<T, TDataShow, TDataHide> : ScreenBase
         where T : class
+        where TDataShow : class
+        where TDataHide : class
     {
         public event Action<T> OnHideRequestT;
         public event Action<T> OnHideCompletedT;
@@ -13,25 +15,41 @@ namespace LegendaryTools.Systems.ScreenFlow
         
         public override IEnumerator Show(object args)
         {
-            if (args is TDataShow typedData)
+            if (args != null)
             {
-                yield return Show(typedData);
+                if (args is TDataShow typedData)
+                    yield return ShowT(typedData);
+                else
+                {
+                    Debug.LogError(
+                        $"[ScreenBaseT:Show] TypeMissMatch: Args is type {args.GetType()}, but was expected {typeof(TDataShow)}, Show() will not be called");
+                    yield return null;
+                }
             }
             else
             {
-                Debug.LogError($"[ScreenBaseT:Show] TypeMissMatch: Args is type {args.GetType()}, but was expected {typeof(TDataShow)}, Show() will not be called");
+                Debug.LogWarning($"[ScreenBaseT:Show] Calling Show with null args.");
+                yield return ShowT(null);
             }
         }
         
         public override IEnumerator Hide(object args)
         {
-            if (args is TDataHide typedData)
+            if (args != null)
             {
-                yield return Hide(typedData);
+                if (args is TDataHide typedData)
+                    yield return HideT(typedData);
+                else
+                {
+                    Debug.LogError(
+                        $"[ScreenBaseT:Hide] TypeMissMatch: Args is type {args.GetType()}, but was expected {typeof(TDataHide)}, Hide() will not be called");
+                    yield return null;
+                }
             }
             else
             {
-                Debug.LogError($"[ScreenBaseT:Hide] TypeMissMatch: Args is type {args.GetType()}, but was expected {typeof(TDataHide)}, Hide() will not be called");
+                Debug.LogWarning($"[ScreenBaseT:Hide] Calling Hide with null args.");
+                yield return HideT(null);
             }
         }
 
@@ -50,7 +68,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             OnDestroyedT?.Invoke(this as T);
         }
 
-        public abstract IEnumerator Show(TDataShow args);
-        public abstract IEnumerator Hide(TDataHide args);
+        public abstract IEnumerator ShowT(TDataShow args);
+        public abstract IEnumerator HideT(TDataHide args);
     }
 }

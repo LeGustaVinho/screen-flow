@@ -11,8 +11,17 @@ namespace LegendaryTools.Systems.ScreenFlow
 {
     [RequireComponent(typeof(Canvas))]
     [RequireComponent(typeof(CanvasScaler))]
-    public class ScreenFlow : SingletonBehaviour<ScreenFlow>, IScreenFlow
+    public class ScreenFlow : 
+        
+#if SCREEN_FLOW_SINGLETON
+        SingletonBehaviour<ScreenFlow>
+#else
+        MonoBehaviour
+#endif
+        , IScreenFlow
     {
+        public bool AutoInitializeOnStart;
+        
         public ScreenFlowConfig Config;
         public ScreenConfig StartScreen;
 
@@ -71,7 +80,7 @@ namespace LegendaryTools.Systems.ScreenFlow
         private CanvasScaler canvasScaler;
         private GraphicRaycaster graphicRaycaster;
 
-        public void SendTrigger(string name, System.Object args = null, bool enqueue = false, 
+        public void SendTrigger(string name, System.Object args = null, bool enqueue = true, 
             Action<IScreenBase> requestedScreenOnShow = null, Action<IScreenBase> previousScreenOnHide = null)
         {
             if (uiEntitiesLookup.TryGetValue(name, out UIEntityBaseConfig uiEntityBaseConfig))
@@ -80,7 +89,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
         }
 
-        public void SendTrigger(UIEntityBaseConfig uiEntity, System.Object args = null, bool enqueue = false, 
+        public void SendTrigger(UIEntityBaseConfig uiEntity, System.Object args = null, bool enqueue = true, 
             Action<IScreenBase> requestedScreenOnShow = null, Action<IScreenBase> previousScreenOnHide = null)
         {
             ScreenFlowCommand command = new ScreenFlowCommand(ScreenFlowCommandType.Trigger, uiEntity, args, requestedScreenOnShow, previousScreenOnHide);
@@ -98,7 +107,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
         }
 
-        public void SendTriggerT<TConfig, TShow, THide>(TConfig uiEntity, System.Object args = null, bool enqueue = false,
+        public void SendTriggerT<TConfig, TShow, THide>(TConfig uiEntity, System.Object args = null, bool enqueue = true,
             Action<TShow> requestedScreenOnShow = null, Action<THide> previousScreenOnHide = null)
             where TConfig : UIEntityBaseConfig
             where TShow : class, IScreenBase
@@ -117,7 +126,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             SendTrigger(uiEntity, args , enqueue, RequestedScreenOnShowDual, PreviousScreenOnHideDual);
         }
 
-        public void MoveBack(System.Object args = null, bool enqueue = false, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
+        public void MoveBack(System.Object args = null, bool enqueue = true, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
         {
             ScreenFlowCommand command = new ScreenFlowCommand(ScreenFlowCommandType.MoveBack, null, args, onShow, onHide);
             if (!IsTransiting)
@@ -134,7 +143,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
         }
 
-        public void CloseForegroundPopup(System.Object args = null, bool enqueue = false, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
+        public void CloseForegroundPopup(System.Object args = null, bool enqueue = true, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
         {
             if (CurrentPopupInstance != null)
             {
@@ -142,7 +151,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
         }
 
-        public void ClosePopup(IPopupBase popupBase, System.Object args = null, bool enqueue = false, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
+        public void ClosePopup(IPopupBase popupBase, System.Object args = null, bool enqueue = true, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
         {
             var command = new ScreenFlowCommand(ScreenFlowCommandType.ClosePopup, popupBase, args, onShow, onHide);
             if (!IsTransiting)
@@ -158,7 +167,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                 }
             }
         }
-
+#if SCREEN_FLOW_SINGLETON
         protected override void Awake()
         {
             base.Awake();
@@ -168,26 +177,30 @@ namespace LegendaryTools.Systems.ScreenFlow
             canvasScaler = GetComponent<CanvasScaler>();
             graphicRaycaster = GetComponent<GraphicRaycaster>();
         }
+#else
+        protected void Awake()
+        {
+            rectTransform = GetComponent<RectTransform>();
+            canvas = GetComponent<Canvas>();
+            canvasScaler = GetComponent<CanvasScaler>();
+            graphicRaycaster = GetComponent<GraphicRaycaster>();
+        }
+#endif
 
+#if SCREEN_FLOW_SINGLETON
         protected override void Start()
         {
             base.Start();
-
-            if (Config == null)
-            {
-                Debug.LogError("[ScreenFlow:Start] -> Config is null");
-                return;
-            }
-
-            Initialize();
-            if (StartScreen != null)
-            {
-                SendTrigger(StartScreen);
-            }
-            
-            preloadRoutine = StartCoroutine(PreLoadRoutine());
+            if(AutoInitializeOnStart)
+                Initialize();
         }
-
+#else
+        protected void Start()
+        {
+            if(AutoInitializeOnStart)
+                Initialize();
+        }
+#endif
         IEnumerator PreLoadRoutine()
         {
             yield return Preload();
@@ -204,8 +217,15 @@ namespace LegendaryTools.Systems.ScreenFlow
             #endif
         }
 
-        private void Initialize()
+        [Sirenix.OdinInspector.Button]
+        public void Initialize()
         {
+            if (Config == null)
+            {
+                Debug.LogError("[ScreenFlow:Start] -> Config is null");
+                return;
+            }
+            
             uiEntitiesLookup.Clear();
             foreach (ScreenConfig screenConfig in Config.Screens)
             {
@@ -256,6 +276,13 @@ namespace LegendaryTools.Systems.ScreenFlow
                     Debug.LogError("[ScreenFlow:Start()] -> UI Entity " + popupInScene.Config.name + " already exists in ScreenFlow");
                 }
             }
+            
+            if (StartScreen != null)
+            {
+                SendTrigger(StartScreen);
+            }
+            
+            preloadRoutine = StartCoroutine(PreLoadRoutine());
         }
 
         private IEnumerator ProcessCommandQueue()
@@ -292,7 +319,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                     }
                     case ScreenFlowCommandType.ClosePopup:
                     {
-                        yield return ClosePopupOp(next.Object as PopupBase, next.Args, next.OnShow, next.OnHide);
+                        yield return ClosePopupOp(next.Object as IPopupBase, next.Args, next.OnShow, next.OnHide);
                         break;
                     }
                 }
@@ -440,7 +467,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                     }
 
                     //Schedule the new screen to load in the background
-                    screenConfig.AssetLoaderConfig.PrepareLoadRoutine<ScreenBase>();
+                    screenConfig.AssetLoaderConfig.PrepareLoadRoutine<GameObject>();
                     nextScreenLoading = StartCoroutine(screenConfig.AssetLoaderConfig.WaitLoadRoutine());
                 }
             }
@@ -500,7 +527,26 @@ namespace LegendaryTools.Systems.ScreenFlow
                 }
             }
 
-            if (screenConfig.AssetLoaderConfig.LoadedAsset as ScreenBase == null)
+            if (screenConfig.AssetLoaderConfig.LoadedAsset == null)
+            {
+                Debug.LogError(
+                    $"[ScreenFlow:ScreenTransitTo()] -> Failed to load {screenConfig.AssetLoaderConfig.name}",
+                    screenConfig);
+                yield break;
+            }
+
+            ScreenBase newScreenPrefab = null;
+            switch (screenConfig.AssetLoaderConfig.LoadedAsset)
+            {
+                case GameObject screenGameObject:
+                {
+                    newScreenPrefab = screenGameObject.GetComponent<ScreenBase>();
+                    break;
+                }
+                case ScreenBase screenBase : newScreenPrefab = screenBase; break;
+            }
+
+            if (newScreenPrefab == null)
             {
                 Debug.LogError($"[ScreenFlow:ScreenTransitTo()] -> {screenConfig.AssetLoaderConfig.LoadedAsset.GetType()} doesn't have any component that inherits from ScreenBase class", screenConfig);
                 yield break;
@@ -509,12 +555,12 @@ namespace LegendaryTools.Systems.ScreenFlow
             ScreenBase newScreenInstance;
             if (screenConfig.AssetLoaderConfig.IsInScene)
             {
-                newScreenInstance = screenConfig.AssetLoaderConfig.LoadedAsset as ScreenBase;
+                newScreenInstance = newScreenPrefab;
                 newScreenInstance.gameObject.SetActive(true);
             }
             else
             {
-                newScreenInstance = InstantiateUIElement<ScreenBase>(screenConfig.AssetLoaderConfig.LoadedAsset as ScreenBase,
+                newScreenInstance = InstantiateUIElement<ScreenBase>(newScreenPrefab,
                     rectTransform, out RectTransform instanceRT, out RectTransform prefabRT);
             }
 
@@ -588,7 +634,7 @@ namespace LegendaryTools.Systems.ScreenFlow
         {
             if (!popupConfig.AssetLoaderConfig.IsLoaded)
             {
-                popupConfig.AssetLoaderConfig.PrepareLoadRoutine<PopupBase>();
+                popupConfig.AssetLoaderConfig.PrepareLoadRoutine<GameObject>();
                 newPopupLoading = StartCoroutine(popupConfig.AssetLoaderConfig.WaitLoadRoutine());
             }
 
@@ -652,51 +698,66 @@ namespace LegendaryTools.Systems.ScreenFlow
 
             yield return newPopupLoading; //Wait for the new popup to load completely if it hasn't loaded yet
             newPopupLoading = null;
-            
-            if (popupConfig.AssetLoaderConfig.LoadedAsset as PopupBase == null)
+
+            if (popupConfig.AssetLoaderConfig.LoadedAsset == null)
             {
-                Debug.LogError($"[ScreenFlow:PopupTransitTo()] -> {popupConfig.AssetLoaderConfig.LoadedAsset.GetType()} doesn't have any component that inherits from PopupBase class");
+                Debug.LogError($"[ScreenFlow:PopupTransitTo()] -> Failed to load {popupConfig.AssetLoaderConfig.name}", popupConfig);
                 yield break;
             }
             
-            IPopupBase newPopup = null;
+            ScreenBase newPopupPrefab = null;
+            switch (popupConfig.AssetLoaderConfig.LoadedAsset)
+            {
+                case GameObject screenGameObject:
+                {
+                    newPopupPrefab = screenGameObject.GetComponent<ScreenBase>();
+                    break;
+                }
+                case PopupBase popupBase : {newPopupPrefab = popupBase; break;}
+                case ScreenBase screenBase : newPopupPrefab = screenBase; break;
+            }
+
+            if (newPopupPrefab is not IPopupBase newPopupImpl)
+            {
+                Debug.LogError($"[ScreenFlow:PopupTransitTo()] -> {popupConfig.AssetLoaderConfig.LoadedAsset.GetType()} doesn't have any component that inherits from {nameof(IPopupBase)} interface", popupConfig);
+                yield break;
+            }
+            
             Canvas canvasPopup = null;
             if (popupConfig.AssetLoaderConfig.IsInScene)
             {
-                newPopup = popupConfig.AssetLoaderConfig.LoadedAsset as PopupBase;
-
                 canvasPopup = GetComponentInParent<Canvas>();
                 if (canvasPopup == null)
                 {
                     canvasPopup = GetComponentInChildren<Canvas>();
                 }
-                newPopup.GameObject.SetActive(true);
+                newPopupPrefab.GameObject.SetActive(true);
             }
             else
             {
-                canvasPopup = GetCanvas(popupConfig.AssetLoaderConfig.LoadedAsset as PopupBase); //Check if the prefab popup has any canvas, if it does, we don't need to instantiate a new canvas
+                canvasPopup = GetCanvas(newPopupPrefab); //Check if the prefab popup has any canvas, if it does, we don't need to instantiate a new canvas
                 
                 if (canvasPopup != null)
                 {
                     //Instantiate the popup from the prefab (and it already has canvas =D) 
-                    newPopup = InstantiateUIElement(popupConfig.AssetLoaderConfig.LoadedAsset as PopupBase, null,
-                        out RectTransform instanceRT, out RectTransform prefabRT);
+                    newPopupImpl = InstantiateUIElement(newPopupPrefab, null,
+                        out RectTransform instanceRT, out RectTransform prefabRT) as IPopupBase;
                 }
                 else
                 {
                     //Instantiate the popup from the prefab
-                    newPopup = InstantiateUIElement(popupConfig.AssetLoaderConfig.LoadedAsset as PopupBase, null,
-                        out RectTransform instanceRT, out RectTransform prefabRT);
+                    newPopupImpl = InstantiateUIElement(newPopupPrefab as ScreenBase, null,
+                        out RectTransform instanceRT, out RectTransform prefabRT) as IPopupBase;
 
                     //Instantiate new canvas to hold popup
-                    canvasPopup = AllocatePopupCanvas(newPopup);
+                    canvasPopup = AllocatePopupCanvas(newPopupImpl);
 
                     //Parent popup to canvas
                     ReparentUIElement(instanceRT, prefabRT, canvasPopup.transform);
                 }
             }
 
-            newPopup.ParentScreen = CurrentScreenInstance;
+            newPopupImpl.ParentScreen = CurrentScreenInstance;
 
             //Change the order of the canvas, so that it is always above screen canvas
             CalculatePopupCanvasSortOrder(canvasPopup, CurrentPopupInstance);
@@ -707,13 +768,13 @@ namespace LegendaryTools.Systems.ScreenFlow
                 case AnimationType.Wait:
                 {
                     //Wait for shows's animation to complete
-                    yield return newPopup.Show(args);
+                    yield return newPopupImpl.Show(args);
                     break;
                 }
                 case AnimationType.Intersection:
                 {
                     //Show animation starts playing (may be playing in parallel with hide's animation)
-                    showPopupRoutine = StartCoroutine(newPopup.Show(args));
+                    showPopupRoutine = StartCoroutine(newPopupImpl.Show(args));
                     break;
                 }
             }
@@ -738,14 +799,14 @@ namespace LegendaryTools.Systems.ScreenFlow
                 showPopupRoutine = null;
             }
             
-            newPopup.OnClosePopupRequest += OnClosePopupRequest;
+            newPopupImpl.OnClosePopupRequest += OnClosePopupRequest;
 
             //Update to new state
             PopupConfigsStack.Add(popupConfig);
-            PopupInstancesStack.Add(newPopup);
+            PopupInstancesStack.Add(newPopupImpl);
             
             popupTransitionRoutine = null;
-            onShow?.Invoke(newPopup);
+            onShow?.Invoke(newPopupImpl);
             OnPopupOpen?.Invoke(oldPopupConfig, popupConfig);
         }
 
@@ -994,6 +1055,10 @@ namespace LegendaryTools.Systems.ScreenFlow
                     }
                 }
             }
+        }
+
+        public void Dispose()
+        {
         }
     }
 }

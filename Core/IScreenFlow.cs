@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace LegendaryTools.Systems.ScreenFlow
 {
-    public interface IScreenFlow
+    public interface IScreenFlow : IDisposable
     {
         bool IsTransiting { get; }
         bool IsPreloading { get; }
@@ -17,7 +17,7 @@ namespace LegendaryTools.Systems.ScreenFlow
         event Action<PopupConfig, PopupConfig> OnPopupOpen;
         
         int PopupStackCount { get; }
-
+        void Initialize();
         void SendTrigger(string name, System.Object args = null, bool enqueue = false, 
             Action<IScreenBase> requestedScreenOnShow = null, Action<IScreenBase> previousScreenOnHide = null);
 

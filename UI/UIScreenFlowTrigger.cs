@@ -11,8 +11,9 @@ namespace LegendaryTools.Systems.ScreenFlow
         
         private Button button;
 
-        public void ProcessTrigger()
+        public virtual void ProcessTrigger()
         {
+#if SCREEN_FLOW_SINGLETON
             if (ScreenFlow.Instance != null)
             {
                 switch (Mode)
@@ -34,6 +35,9 @@ namespace LegendaryTools.Systems.ScreenFlow
                     }
                 }
             }
+#else
+            Debug.LogWarning($"[{nameof(UIScreenFlowTrigger)}:{nameof(ProcessTrigger)}] Cannot be executed because ScreenFlow is not singleton, define SCREEN_FLOW_SINGLETON or override this function.");
+#endif
         }
 
         private void Start()
