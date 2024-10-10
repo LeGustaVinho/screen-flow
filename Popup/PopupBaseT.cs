@@ -4,7 +4,7 @@ using UnityEngine;
 namespace LegendaryTools.Systems.ScreenFlow
 {
     public abstract class PopupBaseT<T, TDataShow, TDataHide> : ScreenBaseT<T, TDataShow, TDataHide>, IPopupBase
-        where T : PopupBase
+        where T : class
     {
 #if ODIN_INSPECTOR
         [Sirenix.OdinInspector.HideInEditorMode]

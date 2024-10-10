@@ -5,7 +5,7 @@ using UnityEngine;
 namespace LegendaryTools.Systems.ScreenFlow
 {
     public abstract class ScreenBaseT<T, TDataShow, TDataHide> : ScreenBase
-        where T : ScreenBase
+        where T : class
     {
         public event Action<T> OnHideRequestT;
         public event Action<T> OnHideCompletedT;
