@@ -46,7 +46,6 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
             else
             {
-                Debug.LogWarning($"[PopupBaseT:GoToBackground] Calling GoToBackground with null args.");
                 OnGoToBackground(null);
                 OnGoneToBackground?.Invoke(this);
                 OnGoneToBackgroundT?.Invoke(this as T);

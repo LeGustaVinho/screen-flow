@@ -28,7 +28,6 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
             else
             {
-                Debug.LogWarning($"[ScreenBaseT:Show] Calling Show with null args.");
                 yield return ShowT(null);
             }
         }
@@ -48,7 +47,6 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
             else
             {
-                Debug.LogWarning($"[ScreenBaseT:Hide] Calling Hide with null args.");
                 yield return HideT(null);
             }
         }
