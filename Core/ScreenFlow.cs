@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using Object = System.Object;
 #if ENABLE_INPUT_SYSTEM
 
 #endif
@@ -107,23 +108,12 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
         }
 
-        public void SendTriggerT<TConfig, TShow, THide>(TConfig uiEntity, System.Object args = null, bool enqueue = true,
-            Action<TShow> requestedScreenOnShow = null, Action<THide> previousScreenOnHide = null)
+        public void SendTriggerT<TConfig, TShow>(TConfig uiEntity, TShow args = null, bool enqueue = true,
+            Action<IScreenBase> requestedScreenOnShow = null, Action<IScreenBase> previousScreenOnHide = null)
             where TConfig : UIEntityBaseConfig
-            where TShow : class, IScreenBase
-            where THide : class, IScreenBase
+            where TShow : class
         {
-            void RequestedScreenOnShowDual(IScreenBase screenBase)
-            {
-                requestedScreenOnShow?.Invoke(screenBase as TShow);
-            }
-            
-            void PreviousScreenOnHideDual(IScreenBase screenBase)
-            {
-                previousScreenOnHide?.Invoke(screenBase as THide);
-            }
-            
-            SendTrigger(uiEntity, args , enqueue, RequestedScreenOnShowDual, PreviousScreenOnHideDual);
+            SendTrigger(uiEntity, args , enqueue, requestedScreenOnShow, previousScreenOnHide);
         }
 
         public void MoveBack(System.Object args = null, bool enqueue = true, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
