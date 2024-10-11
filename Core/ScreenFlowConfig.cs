@@ -37,11 +37,12 @@ namespace LegendaryTools.Systems.ScreenFlow
             Popups = this.FindAssetConfigNear<PopupConfig>().ToArray();
             EditorUtility.SetDirty(this);
         }
-        
+#endif 
         public void RunWeaver()
         {
+#if UNITY_EDITOR
             FindConfigs();
-        }
 #endif
+        }
     }
 }
