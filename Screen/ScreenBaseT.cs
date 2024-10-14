@@ -39,11 +39,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                 if (args is TDataHide typedData)
                     yield return HideT(typedData);
                 else
-                {
-                    Debug.LogError(
-                        $"[ScreenBaseT:Hide] TypeMissMatch: Args is type {args.GetType()}, but was expected {typeof(TDataHide)}, Hide() will not be called");
-                    yield return null;
-                }
+                    yield return HideT(null);
             }
             else
             {

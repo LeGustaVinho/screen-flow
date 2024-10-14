@@ -51,8 +51,9 @@ namespace LegendaryTools.Systems.ScreenFlow
 
         public int PopupStackCount => PopupInstancesStack.Count;
 
-        public event Action<ScreenConfig, ScreenConfig> OnScreenChange;
-        public event Action<PopupConfig, PopupConfig> OnPopupOpen;
+        public event Action<ScreenConfig, IScreenBase> OnStart;
+        public event Action<(ScreenConfig, IScreenBase), (ScreenConfig, IScreenBase)> OnScreenChange;
+        public event Action<(PopupConfig, IPopupBase), (PopupConfig, IPopupBase)> OnPopupOpen;
 
         protected readonly List<UIEntityBaseConfig> PreloadQueue = new List<UIEntityBaseConfig>();
         protected readonly List<EntityArgPair<ScreenConfig>> ScreensHistory = new List<EntityArgPair<ScreenConfig>>();
@@ -114,6 +115,23 @@ namespace LegendaryTools.Systems.ScreenFlow
             where TShow : class
         {
             SendTrigger(uiEntity, args , enqueue, requestedScreenOnShow, previousScreenOnHide);
+        }
+        
+        public void SendTriggerT<TConfig, TShow, THide>(TConfig uiEntity, TShow args = null, bool enqueue = true,
+            Action<ScreenBaseT<TConfig, TShow, THide>> requestedScreenOnShow = null, Action<IScreenBase> previousScreenOnHide = null)
+            where TConfig : UIEntityBaseConfig
+            where TShow : class
+            where THide : class
+        {
+            void RequestedScreenTOnShow(IScreenBase screenBase)
+            {
+                if (screenBase is ScreenBaseT<TConfig, TShow, THide> screenBaseT)
+                {
+                    requestedScreenOnShow?.Invoke(screenBaseT);
+                }
+            }
+            
+            SendTrigger(uiEntity, args , enqueue, RequestedScreenTOnShow, previousScreenOnHide);
         }
 
         public void MoveBack(System.Object args = null, bool enqueue = true, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
@@ -464,6 +482,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             yield return HandlePopupsOnScreenTransit(args);
 
             ScreenConfig oldScreenConfig = CurrentScreenConfig;
+            IScreenBase oldScreenInstance = CurrentScreenInstance;
             if (CurrentScreenConfig != null)
             {
                 switch (CurrentScreenConfig.AnimationType)
@@ -616,7 +635,11 @@ namespace LegendaryTools.Systems.ScreenFlow
 
             screenTransitionRoutine = null;
             onShow?.Invoke(newScreenInstance);
-            OnScreenChange?.Invoke(oldScreenConfig, screenConfig);
+
+            if (oldScreenConfig == null)
+                OnStart?.Invoke(screenConfig, CurrentScreenInstance);
+            
+            OnScreenChange?.Invoke((oldScreenConfig,oldScreenInstance), (screenConfig, CurrentScreenInstance));
         }
 
         private IEnumerator PopupTransitTo(PopupConfig popupConfig, System.Object args = null, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
@@ -628,6 +651,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             }
 
             PopupConfig oldPopupConfig = CurrentPopupConfig;
+            IPopupBase oldPopupInstance = CurrentPopupInstance;
             if (CurrentPopupConfig != null)
             {
                 switch (CurrentPopupConfig.AnimationType)
@@ -706,7 +730,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                 case ScreenBase screenBase : newPopupPrefab = screenBase; break;
             }
 
-            if (newPopupPrefab is not IPopupBase newPopupImpl)
+            if (newPopupPrefab is not IPopupBase newPopupInstance)
             {
                 Debug.LogError($"[ScreenFlow:PopupTransitTo()] -> {popupConfig.AssetLoaderConfig.LoadedAsset.GetType()} doesn't have any component that inherits from {nameof(IPopupBase)} interface", popupConfig);
                 yield break;
@@ -729,24 +753,24 @@ namespace LegendaryTools.Systems.ScreenFlow
                 if (canvasPopup != null)
                 {
                     //Instantiate the popup from the prefab (and it already has canvas =D) 
-                    newPopupImpl = InstantiateUIElement(newPopupPrefab, null,
+                    newPopupInstance = InstantiateUIElement(newPopupPrefab, null,
                         out RectTransform instanceRT, out RectTransform prefabRT) as IPopupBase;
                 }
                 else
                 {
                     //Instantiate the popup from the prefab
-                    newPopupImpl = InstantiateUIElement(newPopupPrefab as ScreenBase, null,
+                    newPopupInstance = InstantiateUIElement(newPopupPrefab as ScreenBase, null,
                         out RectTransform instanceRT, out RectTransform prefabRT) as IPopupBase;
 
                     //Instantiate new canvas to hold popup
-                    canvasPopup = AllocatePopupCanvas(newPopupImpl);
+                    canvasPopup = AllocatePopupCanvas(newPopupInstance);
 
                     //Parent popup to canvas
                     ReparentUIElement(instanceRT, prefabRT, canvasPopup.transform);
                 }
             }
 
-            newPopupImpl.ParentScreen = CurrentScreenInstance;
+            newPopupInstance.ParentScreen = CurrentScreenInstance;
 
             //Change the order of the canvas, so that it is always above screen canvas
             CalculatePopupCanvasSortOrder(canvasPopup, CurrentPopupInstance);
@@ -757,13 +781,13 @@ namespace LegendaryTools.Systems.ScreenFlow
                 case AnimationType.Wait:
                 {
                     //Wait for shows's animation to complete
-                    yield return newPopupImpl.Show(args);
+                    yield return newPopupInstance.Show(args);
                     break;
                 }
                 case AnimationType.Intersection:
                 {
                     //Show animation starts playing (may be playing in parallel with hide's animation)
-                    showPopupRoutine = StartCoroutine(newPopupImpl.Show(args));
+                    showPopupRoutine = StartCoroutine(newPopupInstance.Show(args));
                     break;
                 }
             }
@@ -788,15 +812,15 @@ namespace LegendaryTools.Systems.ScreenFlow
                 showPopupRoutine = null;
             }
             
-            newPopupImpl.OnClosePopupRequest += OnClosePopupRequest;
+            newPopupInstance.OnClosePopupRequest += OnClosePopupRequest;
 
             //Update to new state
             PopupConfigsStack.Add(popupConfig);
-            PopupInstancesStack.Add(newPopupImpl);
+            PopupInstancesStack.Add(newPopupInstance);
             
             popupTransitionRoutine = null;
-            onShow?.Invoke(newPopupImpl);
-            OnPopupOpen?.Invoke(oldPopupConfig, popupConfig);
+            onShow?.Invoke(newPopupInstance);
+            OnPopupOpen?.Invoke((oldPopupConfig, oldPopupInstance), (popupConfig, newPopupInstance));
         }
 
         private void OnClosePopupRequest(IPopupBase popupToClose)
