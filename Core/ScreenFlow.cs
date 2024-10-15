@@ -4,7 +4,6 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 using Debug = UnityEngine.Debug;
-using Object = System.Object;
 #if ENABLE_INPUT_SYSTEM
 
 #endif
@@ -62,6 +61,9 @@ namespace LegendaryTools.Systems.ScreenFlow
         protected readonly List<IPopupBase> PopupInstancesStack = new List<IPopupBase>();
         protected readonly Dictionary<IPopupBase, Canvas> AllocatedPopupCanvas = new Dictionary<IPopupBase, Canvas>();
         protected readonly List<Canvas> AvailablePopupCanvas = new List<Canvas>();
+
+        protected readonly Dictionary<System.Type, List<IScreenViewController>> viewControllers =
+            new Dictionary<System.Type, List<IScreenViewController>>();
         
         private readonly List<ScreenFlowCommand> commandQueue = new List<ScreenFlowCommand>();
         private readonly Dictionary<string, UIEntityBaseConfig> uiEntitiesLookup =
@@ -83,6 +85,30 @@ namespace LegendaryTools.Systems.ScreenFlow
         private CanvasScaler canvasScaler;
         private GraphicRaycaster graphicRaycaster;
 
+        public void BindController<T>(IScreenViewController<T> controller)
+            where T : IScreenBase
+        {
+            Type viewType = typeof(T);
+            
+            if (!viewControllers.ContainsKey(viewType))
+                viewControllers.Add(viewType, new List<IScreenViewController>());
+            
+            if(!viewControllers[viewType].Contains(controller))
+                viewControllers[viewType].Add(controller);
+        }
+        
+        public void UnBindController<T>(IScreenViewController<T> controller)
+            where T : IScreenBase
+        {
+            Type viewType = typeof(T);
+            
+            if (!viewControllers.TryGetValue(viewType, out List<IScreenViewController> controllers))
+            {
+                if (controllers.Contains(controller))
+                    controllers.Remove(controller);
+            }
+        }
+        
         public void SendTrigger(string name, System.Object args = null, bool enqueue = true, 
             Action<IScreenBase> requestedScreenOnShow = null, Action<IScreenBase> previousScreenOnHide = null)
         {
@@ -495,6 +521,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                         yield return CurrentScreenInstance.RequestHide(args);
                         
                         onHide?.Invoke(CurrentScreenInstance);
+                        CallOnHideForController(CurrentScreenInstance);
 
                         if (CurrentScreenConfig.AssetLoaderConfig.IsInScene)
                         {
@@ -594,6 +621,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             {
                 yield return hideScreenRoutine; //Wait for hide's animation to complete
                 onHide?.Invoke(CurrentScreenInstance);
+                CallOnHideForController(CurrentScreenInstance);
                 
                 if (CurrentScreenConfig.AssetLoaderConfig.IsInScene)
                 {
@@ -641,6 +669,44 @@ namespace LegendaryTools.Systems.ScreenFlow
                 OnStart?.Invoke(screenConfig, CurrentScreenInstance);
             
             OnScreenChange?.Invoke((oldScreenConfig,oldScreenInstance), (screenConfig, CurrentScreenInstance));
+            CallOnShowForController(CurrentScreenInstance);
+        }
+
+        private void CallOnShowForController(IScreenBase view)
+        {
+            Type viewType = view.GetType();
+            if (viewControllers.TryGetValue(viewType, out List<IScreenViewController> controllers))
+            {
+                foreach (IScreenViewController controller in controllers)
+                {
+                    controller.OnShow(view);
+                }
+            }
+        }
+        
+        private void CallOnHideForController(IScreenBase view)
+        {
+            Type viewType = view.GetType();
+            if (viewControllers.TryGetValue(viewType, out List<IScreenViewController> controllers))
+            {
+                foreach (IScreenViewController controller in controllers)
+                {
+                    controller.OnHide(view);
+                }
+            }
+        }
+        
+        private void CallOnGoingToBackgroundForController(IPopupBase view)
+        {
+            Type viewType = view.GetType();
+            if (viewControllers.TryGetValue(viewType, out List<IScreenViewController> controllers))
+            {
+                foreach (IScreenViewController controller in controllers)
+                {
+                    if(controller is not IPopupScreenViewController popupViewController) continue;
+                    popupViewController.OnGoingToBackground(view);
+                }
+            }
         }
 
         private IEnumerator PopupTransitTo(PopupConfig popupConfig, System.Object args = null, Action<IScreenBase> onShow = null, Action<IScreenBase> onHide = null)
@@ -663,12 +729,15 @@ namespace LegendaryTools.Systems.ScreenFlow
                         if (CurrentScreenConfig.AllowStackablePopups)
                         {
                             onHide?.Invoke(CurrentPopupInstance);
+                            CallOnHideForController(CurrentPopupInstance);
                             CurrentPopupInstance.GoToBackground(args);
+                            CallOnGoingToBackgroundForController(CurrentPopupInstance);
 
                             if (CurrentPopupConfig.GoingBackgroundBehaviour != PopupGoingBackgroundBehaviour.DontHide)
                             {
                                 yield return CurrentPopupInstance.RequestHide(args);
                                 onHide?.Invoke(CurrentPopupInstance);
+                                CallOnHideForController(CurrentPopupInstance);
 
                                 if (CurrentPopupConfig.GoingBackgroundBehaviour ==
                                     PopupGoingBackgroundBehaviour.HideAndDestroy)
@@ -682,6 +751,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                             //Wait for hide's animation to complete
                             yield return CurrentPopupInstance.RequestHide(args);
                             onHide?.Invoke(CurrentPopupInstance);
+                            CallOnHideForController(CurrentPopupInstance);
                             DisposePopupFromHide(CurrentPopupConfig, CurrentPopupInstance, CurrentPopupConfig == popupConfig);
                         }
 
@@ -692,6 +762,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                         if (CurrentScreenConfig.AllowStackablePopups)
                         {
                             CurrentPopupInstance.GoToBackground(args);
+                            CallOnGoingToBackgroundForController(CurrentPopupInstance);
 
                             if (CurrentPopupConfig.GoingBackgroundBehaviour != PopupGoingBackgroundBehaviour.DontHide)
                             {
@@ -797,7 +868,8 @@ namespace LegendaryTools.Systems.ScreenFlow
             {
                 yield return hidePopupRoutine; //Wait for hide's animation to complete
                 onHide?.Invoke(CurrentPopupInstance);
-
+                CallOnHideForController(CurrentPopupInstance);
+                
                 if (CurrentPopupConfig.GoingBackgroundBehaviour ==
                     PopupGoingBackgroundBehaviour.HideAndDestroy)
                 {
@@ -822,6 +894,7 @@ namespace LegendaryTools.Systems.ScreenFlow
             popupTransitionRoutine = null;
             onShow?.Invoke(newPopupInstance);
             OnPopupOpen?.Invoke((oldPopupConfig, oldPopupInstance), (popupConfig, newPopupInstance));
+            CallOnShowForController(newPopupInstance);
         }
 
         private void OnClosePopupRequest(IPopupBase popupToClose)

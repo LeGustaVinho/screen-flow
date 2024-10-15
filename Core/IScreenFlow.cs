@@ -22,6 +22,12 @@ namespace LegendaryTools.Systems.ScreenFlow
         void SendTrigger(string name, System.Object args = null, bool enqueue = true, 
             Action<IScreenBase> requestedScreenOnShow = null, Action<IScreenBase> previousScreenOnHide = null);
 
+        public void BindController<T>(IScreenViewController<T> controller)
+            where T : IScreenBase;
+
+        public void UnBindController<T>(IScreenViewController<T> controller)
+            where T : IScreenBase;
+        
         void SendTrigger(UIEntityBaseConfig uiEntity, System.Object args = null, bool enqueue = true, 
             Action<IScreenBase> requestedScreenOnShow = null, Action<IScreenBase> previousScreenOnHide = null);
 
