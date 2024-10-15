@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
+using Debug = UnityEngine.Debug;
 using Object = System.Object;
 #if ENABLE_INPUT_SYSTEM
 
@@ -456,7 +457,7 @@ namespace LegendaryTools.Systems.ScreenFlow
         {
             foreach (UIEntityBaseConfig uiEntityBaseConfig in PreloadQueue)
             {
-                uiEntityBaseConfig.AssetLoaderConfig.PrepareLoadRoutine<ScreenBase>();
+                uiEntityBaseConfig.AssetLoaderConfig.PrepareLoadRoutine<GameObject>();
                 yield return uiEntityBaseConfig.AssetLoaderConfig.WaitLoadRoutine();
             }
         }
