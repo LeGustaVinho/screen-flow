@@ -11,33 +11,42 @@ namespace LegendaryTools.Systems.ScreenFlow
         
         private Button button;
 
-        public virtual void ProcessTrigger()
+        public virtual IScreenFlow ScreenFlowInstance
         {
 #if SCREEN_FLOW_SINGLETON
-            if (ScreenFlow.Instance != null)
+            get => ScreenFlow.Instance;
+#else
+            get
+            {
+                Debug.LogWarning($"[{nameof(UIScreenFlowTrigger)}:{nameof(ScreenFlowInstance)}] Cannot be executed because ScreenFlow is not singleton, define SCREEN_FLOW_SINGLETON or override this property.");
+                return null;
+            }
+#endif
+        }
+        
+        public void ProcessTrigger()
+        {
+            if (ScreenFlowInstance != null)
             {
                 switch (Mode)
                 {
                     case ScreenFlowTriggerMode.Trigger:
                     {
-                        ScreenFlow.Instance.SendTrigger(UiEntity, enqueue:Enqueue);
+                        ScreenFlowInstance.SendTrigger(UiEntity, enqueue:Enqueue);
                         break;
                     }
                     case ScreenFlowTriggerMode.MoveBack:
                     {
-                        ScreenFlow.Instance.MoveBack(enqueue:Enqueue);
+                        ScreenFlowInstance.MoveBack(enqueue:Enqueue);
                         break;
                     }
                     case ScreenFlowTriggerMode.ClosePopup:
                     {
-                        ScreenFlow.Instance.CloseForegroundPopup(enqueue:Enqueue);
+                        ScreenFlowInstance.CloseForegroundPopup(enqueue:Enqueue);
                         break;
                     }
                 }
             }
-#else
-            Debug.LogWarning($"[{nameof(UIScreenFlowTrigger)}:{nameof(ProcessTrigger)}] Cannot be executed because ScreenFlow is not singleton, define SCREEN_FLOW_SINGLETON or override this function.");
-#endif
         }
 
         private void Start()

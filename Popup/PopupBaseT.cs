@@ -30,30 +30,21 @@ namespace LegendaryTools.Systems.ScreenFlow
         public event Action<T> OnGoneToBackgroundT;
         
         public abstract void OnGoToBackgroundT(TDataHide args);
+        
         void IPopupBase.GoToBackground(object args)
         {
-            if (args != null)
-            {
-                if (args is TDataHide typedData)
-                {
-                    OnGoToBackgroundT(typedData);
-                    OnGoneToBackground?.Invoke(this);
-                    OnGoneToBackgroundT?.Invoke(this as T);
-                }
-                else
-                    Debug.LogError(
-                        $"[PopupBaseT:GoToBackground] TypeMissMatch: Args is type {args.GetType()}, but was expected {typeof(TDataShow)}, GoToBackground() will not be called");
-            }
+            if (args != null && args is TDataHide typedData)
+                OnGoToBackgroundT(typedData);
             else
-            {
-                OnGoToBackground(null);
-                OnGoneToBackground?.Invoke(this);
-                OnGoneToBackgroundT?.Invoke(this as T);
-            }
+                OnGoToBackgroundT(null);
+            
+            OnGoneToBackground?.Invoke(this);
+            OnGoneToBackgroundT?.Invoke(this as T);
         }
 
         public void OnGoToBackground(object args)
-        {}
+        {
+        }
 
         public virtual void ClosePopup()
         {
