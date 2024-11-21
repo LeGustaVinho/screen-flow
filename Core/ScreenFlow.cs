@@ -404,6 +404,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                             //Wait for hide's animation to complete
                             yield return popupBase.RequestHide(args);
                             onHide?.Invoke(CurrentPopupInstance);
+                            CallOnHideForController(popupBase);
                             DisposePopupFromHide(popupConfig, popupBase);
                             break;
                         }
@@ -440,6 +441,7 @@ namespace LegendaryTools.Systems.ScreenFlow
                     {
                         yield return hidePopupRoutine; //Wait for hide's animation to complete
                         onHide?.Invoke(CurrentPopupInstance);
+                        CallOnHideForController(popupBase);
                         DisposePopupFromHide(CurrentPopupConfig, CurrentPopupInstance);
                         hidePopupRoutine = null;
                     }
